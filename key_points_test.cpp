@@ -70,7 +70,7 @@ int main( int argc, char** argv )
     Mat frame_1, frame_2, outpt, outpt_kp;
     std::vector<KeyPoint> keypoints_object_1, keypoints_object_2;
 
-    int minHessian = 300;
+    int minHessian = 2000;
     SurfFeatureDetector detector( minHessian );
 
     namedWindow("frame",1);
@@ -134,7 +134,7 @@ int main( int argc, char** argv )
 
         for( int i = 0; i < descriptors1.rows; i++ )
         { 
-            if( matches[i].distance < 3*min_dist )
+            if( matches[i].distance < 2*min_dist )
             { 
                 good_matches.push_back( matches[i]); 
             }
@@ -147,7 +147,7 @@ int main( int argc, char** argv )
         imshow("frame", outpt);
         if(waitKey(30) >= 0) 
         {
-            imwrite( "./test_img.jpg", frame_2);
+            imwrite( "./test_img1.jpg", frame_2);
             break;
         }
     }
