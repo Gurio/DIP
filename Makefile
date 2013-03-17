@@ -8,9 +8,9 @@ LIBRARIES       := -lSegFault -lopencv_nonfree -lopencv_core -lopencv_flann -lop
 #all: test
 
 test: 
+	$(CC) $(CFLAGS) -o track track_points.cpp $(LIBRARIES)
 	$(CC) $(CFLAGS) -o test key_points_test.cpp $(LIBRARIES)
 	$(CC) $(CFLAGS) -o lk_test lucas-kanade.cpp $(LIBRARIES)
-
         
 clean:
 	rm -f *.o
