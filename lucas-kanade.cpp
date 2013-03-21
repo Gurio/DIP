@@ -35,6 +35,35 @@ static void onMouse( int event, int x, int y, int /*flags*/, void* /*param*/ )
     }
 }
 
+void drawVectors (
+    const vector<Point2f>& points1, 
+    const Mat& img2, 
+    const vector<Point2f>& points2,
+    Mat& outImg, 
+    const Scalar& singlePointColor=Scalar::all(-1))
+{
+    if( img2.type() == CV_8UC3 )
+    {
+        img2.copyTo( outImg );
+    }
+    else if( img2.type() == CV_8UC1 )
+    {
+        cvtColor( img2, outImg, CV_GRAY2BGR );
+    }
+    vector<Point2f>::const_iterator first_pt = points1.begin(), second_pt = points2.begin(), last = points1.end();
+   
+    //draw offset of each keypoint on second image
+    while (first_pt!=last)
+    {
+        int radius = 3;
+
+        circle( outImg, *second_pt, radius, singlePointColor, 1, 8);
+        line(outImg, *first_pt, *second_pt, singlePointColor, 1, 8);
+        ++first_pt;
+        ++second_pt;
+    }
+}
+
 int main( int argc, char** argv )
 {
     VideoCapture cap;
@@ -61,8 +90,9 @@ int main( int argc, char** argv )
     namedWindow( "LK Demo", 1 );
     setMouseCallback( "LK Demo", onMouse, 0 );
 
-    Mat gray, prevGray, image;
-    vector<Point2f> points[2];
+    Mat gray, prevGray, image, outpt, to_save;
+    vector<Point2f> points[2], oldPoints;
+    int framesToSkip = 10, framesSkipped = 0;
 
     for(;;)
     {
@@ -81,7 +111,7 @@ int main( int argc, char** argv )
         {
             // automatic initialization
             goodFeaturesToTrack(gray, points[1], MAX_COUNT, 0.01, 10, Mat(), 5, 0, 0.04);
-            //cornerSubPix(gray, points[1], subPixWinSize, Size(-1,-1), termcrit);
+            oldPoints = points[0];
             addRemovePt = false;
         }
         else if( !points[0].empty() )
@@ -93,24 +123,7 @@ int main( int argc, char** argv )
             calcOpticalFlowPyrLK(prevGray, gray, points[0], points[1], status, err, winSize,
                                  3, termcrit, 0, 0.001);
             size_t i, k;
-            for( i = k = 0; i < points[1].size(); i++ )
-            {
-                if( addRemovePt )
-                {
-                    if( norm(point - points[1][i]) <= 5 )
-                    {
-                        addRemovePt = false;
-                        continue;
-                    }
-                }
 
-                if( !status[i] )
-                    continue;
-
-                points[1][k++] = points[1][i];
-                circle( image, points[1][i], 3, Scalar(0,255,0), -1, 8);
-            }
-            points[1].resize(k);
         }
 
         if( addRemovePt && points[1].size() < (size_t)MAX_COUNT )
@@ -122,12 +135,29 @@ int main( int argc, char** argv )
             addRemovePt = false;
         }
 
+        if (framesSkipped == framesToSkip)
+        {
+            framesSkipped = 0; 
+            oldPoints = points[0]; 
+            image.copyTo(to_save);
+        }
+        else
+        {
+            framesSkipped ++;
+            drawVectors( oldPoints, image, points[1], outpt, Scalar( 0, 255, 255 ));
+        }
+
         needToInit = false;
-        imshow("LK Demo", image);
+        imshow("LK Demo", outpt);
 
         char c = (char)waitKey(10);
         if( c == 27 )
+        {
+            imwrite( "./test_img_from.jpg", to_save);
+            imwrite( "./test_img_to.jpg", image);
+            imwrite( "./test_img_offsets.jpg", outpt);
             break;
+        }
         switch( c )
         {
         case 'r':
