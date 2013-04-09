@@ -35,6 +35,34 @@ static void onMouse( int event, int x, int y, int /*flags*/, void* /*param*/ )
     }
 }
 
+void drawBigLine (Mat& img, Point2f pt1, Point2f pt2, const Scalar& color, int thickness=1, int lineType=8, int shift=0)
+{
+    cout << pt1.x << ":" << pt2.x << " " << pt1.y << ":" << pt2.y << endl;
+    if (pt1.x != pt2.x && pt1.y != pt2.y)
+    {
+        float x_coef = abs(pt1.x-pt2.x), y_coef = abs(pt1.y-pt2.y);
+        Point2f max (pt1), min (pt1);
+        int i = 0;
+        cout << x_coef << " " << y_coef << endl;
+        
+        while (max.x < img.rows || max.y < img.cols)
+        {
+            i++;
+            max.x = pt1.x + x_coef*i;
+            max.y = pt1.y + y_coef*i;
+        }
+
+        while (min.x > 10 && min.y > 10)
+        {
+            i++;
+            min.x = pt1.x - x_coef*i;
+            min.y = pt1.y - y_coef*i;
+        }
+
+        line(img, min, max, color, thickness, lineType, shift);
+    }
+}
+
 void drawVectors (
     const vector<Point2f>& points1, 
     const Mat& img2, 
@@ -50,17 +78,35 @@ void drawVectors (
     {
         cvtColor( img2, outImg, CV_GRAY2BGR );
     }
-    vector<Point2f>::const_iterator first_pt = points1.begin(), second_pt = points2.begin(), last = points1.end();
-   
-    //draw offset of each keypoint on second image
-    while (first_pt!=last)
+    if (points2.size() != 0 && points1.size() != 0 && points2.size() == points1.size())
     {
-        int radius = 3;
+        cout << points1.size() << " " << points2.size() << endl;
+        vector<Point2f> diff;
+        vector<float> dist, x, y;
 
-        circle( outImg, *second_pt, radius, singlePointColor, 1, 8);
-        line(outImg, *first_pt, *second_pt, singlePointColor, 1, 8);
-        ++first_pt;
-        ++second_pt;
+        for (int i = 0; i < points1.size(); i++)
+        {
+            x.push_back(abs(points1[i].x - points2[i].x));
+            y.push_back(abs(points1[i].y - points2[i].y));            
+        }
+        magnitude(x, y, dist);
+        
+        vector<Point2f>::const_iterator first_pt = points1.begin(), second_pt = points2.begin(), last = points1.end();
+        vector<float>::const_iterator cur_dist = dist.begin();
+       
+        while (first_pt!=last)
+        {
+            int radius = 3;
+            if (*cur_dist > 3)
+            {    
+                circle( outImg, *second_pt, radius, singlePointColor, 1, 8);
+                drawBigLine (outImg, *first_pt, *second_pt, singlePointColor, 1, 8);
+                cout << *first_pt << " " << *second_pt << " " << *cur_dist << " cols: " << endl;
+            }
+            ++cur_dist;
+            ++first_pt;
+            ++second_pt;
+        }
     }
 }
 
