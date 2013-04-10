@@ -8,6 +8,33 @@
 using namespace cv;
 using namespace std;
 
+class LineEq
+{
+public:
+    LineEq(Point2f first, Point2f second)
+    {
+        a = first.y - second.y;
+        b = first.x - second.x;
+        c = first.x*second.y - second.x*first.y;
+    };
+
+    float get_x (float y)
+    {
+        return -(c-y*b)/a;
+    }
+
+    float get_y (float x)
+    {
+        return -(c-x*a)/b;
+    }
+
+    ~LineEq(){};
+
+private:
+    float a, b, c; // line equasion coefficient
+
+};
+
 static void help()
 {
     // print a welcome message, and the OpenCV version
@@ -37,27 +64,19 @@ static void onMouse( int event, int x, int y, int /*flags*/, void* /*param*/ )
 
 void drawBigLine (Mat& img, Point2f pt1, Point2f pt2, const Scalar& color, int thickness=1, int lineType=8, int shift=0)
 {
-    cout << pt1.x << ":" << pt2.x << " " << pt1.y << ":" << pt2.y << endl;
+    //cout << pt1.x << ":" << pt2.x << " " << pt1.y << ":" << pt2.y << endl;
     if (pt1.x != pt2.x && pt1.y != pt2.y)
     {
-        float x_coef = abs(pt1.x-pt2.x), y_coef = abs(pt1.y-pt2.y);
-        Point2f max (pt1), min (pt1);
-        int i = 0;
-        cout << x_coef << " " << y_coef << endl;
-        
-        while (max.x < img.rows || max.y < img.cols)
-        {
-            i++;
-            max.x = pt1.x + x_coef*i;
-            max.y = pt1.y + y_coef*i;
-        }
-
-        while (min.x > 10 && min.y > 10)
-        {
-            i++;
-            min.x = pt1.x - x_coef*i;
-            min.y = pt1.y - y_coef*i;
-        }
+        // here we draw long lines for eacj offset (two points).
+        // For that we have class LineEq, which creates line equasion from two points. 
+        // and then we get maximum (y = max_image_size) and minimum points (y = 0), via that class
+        int max_image_size = 700;
+        LineEq thisLine (pt1, pt2);
+        Point2f max, min;
+        max.x = thisLine.get_x(max_image_size);
+        max.y = max_image_size;
+        min.x = thisLine.get_x(0);
+        min.y = 0;
 
         line(img, min, max, color, thickness, lineType, shift);
     }
@@ -80,7 +99,7 @@ void drawVectors (
     }
     if (points2.size() != 0 && points1.size() != 0 && points2.size() == points1.size())
     {
-        cout << points1.size() << " " << points2.size() << endl;
+        //cout << points1.size() << " " << points2.size() << endl;
         vector<Point2f> diff;
         vector<float> dist, x, y;
 
@@ -97,11 +116,12 @@ void drawVectors (
         while (first_pt!=last)
         {
             int radius = 3;
-            if (*cur_dist > 3)
+            circle( outImg, *second_pt, radius, Scalar( 190, 190, 190 ), 1, 8);
+            if (*cur_dist > 10)
             {    
                 circle( outImg, *second_pt, radius, singlePointColor, 1, 8);
                 drawBigLine (outImg, *first_pt, *second_pt, singlePointColor, 1, 8);
-                cout << *first_pt << " " << *second_pt << " " << *cur_dist << " cols: " << endl;
+                line (outImg, *first_pt, *second_pt, Scalar( 255, 0, 255 ), 1, 8);
             }
             ++cur_dist;
             ++first_pt;
@@ -183,6 +203,9 @@ int main( int argc, char** argv )
 
         if (framesSkipped == framesToSkip)
         {
+            imwrite( "./test_img_from.jpg", to_save);
+            imwrite( "./test_img_to.jpg", image);
+            imwrite( "./test_img_offsets.jpg", outpt);
             framesSkipped = 0; 
             oldPoints = points[0]; 
             image.copyTo(to_save);
@@ -199,9 +222,6 @@ int main( int argc, char** argv )
         char c = (char)waitKey(10);
         if( c == 27 )
         {
-            imwrite( "./test_img_from.jpg", to_save);
-            imwrite( "./test_img_to.jpg", image);
-            imwrite( "./test_img_offsets.jpg", outpt);
             break;
         }
         switch( c )
